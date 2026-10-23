@@ -30,7 +30,7 @@
       clearLogs: 'Clear', exportLogs: 'Share logs', noLogs: 'No logs yet', logFilter: 'Level',
       vpnPermission: 'Allow the VPN request to continue', notifPerm: 'Notifications keep the connection visible', invalidConfig: 'Check the settings',
       proxyOnlyNeedsShare: 'Turn on sharing for share-only mode', retrying: 'Server unreachable. Retrying…', backgroundHint: 'The connection continues in the background',
-      authFailed: 'The server refused the password', disconnectBtn: 'Disconnect', unavailable: 'Open this app on Android with the VPN module', speed: 'Speed',
+      authFailed: 'The server refused the password', disconnectBtn: 'Disconnect', connectBtn: 'Connect', permOk: 'Permissions granted', sub_off: 'service inactive', sub_connecting: 'establishing tunnel…', sub_reconnecting: 'recovering connection…', sub_on: 'relay active • traffic routing', sub_error: 'connection failed', unavailable: 'Open this app on Android with the VPN module', speed: 'Speed',
     },
     fa: {
       home: 'خانه', profiles: 'پروفایل‌ها', share: 'اشتراک', logs: 'گزارش‌ها', settings: 'تنظیمات',
@@ -61,7 +61,7 @@
       clearLogs: 'پاک کردن', exportLogs: 'اشتراک لاگ', noLogs: 'هنوز لاگی نیست', logFilter: 'سطح',
       vpnPermission: 'درخواست وی‌پی‌ان را تأیید کنید', notifPerm: 'اعلان، اتصال را قابل مشاهده نگه می‌دارد', invalidConfig: 'تنظیمات را بررسی کنید',
       proxyOnlyNeedsShare: 'برای حالت فقط‌اشتراک، اشتراک را روشن کنید', retrying: 'سرور در دسترس نیست. تلاش مجدد…', backgroundHint: 'اتصال در پس‌زمینه ادامه می‌یابد',
-      authFailed: 'سرور رمز را نپذیرفت', disconnectBtn: 'قطع اتصال', unavailable: 'این برنامه را روی اندروید با ماژول VPN باز کنید', speed: 'سرعت',
+      authFailed: 'سرور رمز را نپذیرفت', disconnectBtn: 'قطع اتصال', connectBtn: 'اتصال', permOk: 'مجوزها داده شد', sub_off: 'سرویس غیرفعال', sub_connecting: 'در حال برقراری تونل…', sub_reconnecting: 'در حال بازیابی اتصال…', sub_on: 'رله فعال • مسیریابی ترافیک', sub_error: 'اتصال ناموفق', unavailable: 'این برنامه را روی اندروید با ماژول VPN باز کنید', speed: 'سرعت',
     }
   };
   var lang = 'en';
