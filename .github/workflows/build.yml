@@ -1,0 +1,59 @@
+# Builds AvanGard with the Sweetmelon core. Run it from the Actions tab, or push.
+#
+# The core is pinned to a branch of legionir/sweetmelon until its release v2.7.0 is
+# tagged; then replace `claude/epic-bell-7j8asn` below with `v2.7.0`.
+name: Build AvanGard
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+    inputs:
+      build_aab:
+        description: 'Also build an Android App Bundle'
+        type: boolean
+        default: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/share/swift
+
+      - name: Build the APK
+        id: build
+        uses: legionir/sweetmelon@claude/epic-bell-7j8asn
+        with:
+          target: apk
+          www: www
+          config: sweetmelon.yaml
+          icon: icon.png
+          artifact_name: avangard-apk
+          # Your own key (Settings > Secrets). Without these the build is signed with a
+          # throw-away key: fine for testing, not for the store.
+          keystore_base64: ${{ secrets.KEYSTORE_BASE64 }}
+          keystore_password: ${{ secrets.KEYSTORE_PASSWORD }}
+          key_alias: ${{ secrets.KEY_ALIAS }}
+          key_password: ${{ secrets.KEY_PASSWORD }}
+
+  aab:
+    if: ${{ inputs.build_aab }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: legionir/sweetmelon@claude/epic-bell-7j8asn
+        with:
+          target: aab
+          www: www
+          config: sweetmelon.yaml
+          icon: icon.png
+          artifact_name: avangard-aab
+          keystore_base64: ${{ secrets.KEYSTORE_BASE64 }}
+          keystore_password: ${{ secrets.KEYSTORE_PASSWORD }}
+          key_alias: ${{ secrets.KEY_ALIAS }}
+          key_password: ${{ secrets.KEY_PASSWORD }}
