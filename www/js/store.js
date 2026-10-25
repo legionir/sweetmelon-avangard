@@ -12,7 +12,16 @@
     } catch (e) { return fallback; }
   }
   async function save(key, value) { try { await N().storage.set(key, value); } catch (e) { console.warn('save', key, e); } }
-  async function secret(key) { try { var v = unwrap(await N().secureStorage.get(key)); return v == null ? '' : String(v); } catch (e) { return ''; } }
+  // secureStorage.get answers { key, value, found }, not the bare value.
+  async function secret(key) {
+    try {
+      var r = unwrap(await N().secureStorage.get(key));
+      var v = r && typeof r === 'object' && 'value' in r ? r.value : r;
+      if (v == null || typeof v === 'object') return '';
+      v = String(v);
+      return v === '[object Object]' ? '' : v; // written by an earlier build that read this wrongly
+    } catch (e) { return ''; }
+  }
   async function setSecret(key, v) { try { if (v) await N().secureStorage.set(key, v); else await N().secureStorage.remove(key); } catch (e) { console.warn('secret', e); } }
 
   var DEFAULTS = {
