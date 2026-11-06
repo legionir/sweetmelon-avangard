@@ -26,7 +26,7 @@
 
   var DEFAULTS = {
     lang: '', theme: 'dark', mode: 'vpn', activeId: '',
-    remoteDns: true, dnsIpv4: '8.8.8.8', blockQuic: true, enableIpv6: false, blockIpv6: true, bypassLan: false, globalMode: true, tunnelMtu: 8500,
+    remoteDns: true, dnsIpv4: '8.8.8.8', blockQuic: true, udpRelay: true, enableIpv6: false, blockIpv6: true, bypassLan: false, globalMode: true, tunnelMtu: 8500,
     killSwitch: true, splitMode: 'off', apps: [], excludeGoogleServices: false,
     warmPool: 2, idleMin: 15, connectTimeoutSec: 15, pingIntervalSec: 45, logLevel: 'warn',
     share: { enabled: false, port: 1080, bind: '0.0.0.0', authEnabled: true, username: 'avangard', password: '', allowPrivate: false }
@@ -94,7 +94,7 @@
       var c = {
         mode: s.mode, label: p.name,
         serverHost: p.host, serverPort: Number(p.port) || 443, useTls: p.useTls !== false, wsPath: p.path || '/', password: p.password,
-        sni: p.sni || '', hostHeader: p.hostHeader || '', allowInsecure: !!p.allowInsecure, blockQuic: s.blockQuic !== false,
+        sni: p.sni || '', hostHeader: p.hostHeader || '', allowInsecure: !!p.allowInsecure, blockQuic: s.blockQuic !== false, udpRelay: s.udpRelay !== false,
         remoteDns: s.remoteDns, dnsIpv4: s.dnsIpv4, enableIpv6: s.enableIpv6, blockIpv6: s.blockIpv6, bypassLan: s.bypassLan,
         globalMode: s.globalMode, tunnelMtu: Number(s.tunnelMtu) || 8500, killSwitch: s.killSwitch,
         splitMode: s.splitMode, apps: s.apps, excludeGoogleServices: s.excludeGoogleServices,

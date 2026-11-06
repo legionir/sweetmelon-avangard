@@ -33,7 +33,10 @@ Run the tunnel server of the w2ray project (`TUNNEL_ENABLED=1`), then add a prof
 address and password. A wrong password is not retried: the server bans an address after five failures for 15 minutes.
 
 ## Notes
-- The tunnel carries TCP. DNS is resolved on the server side; UDP to port 53 is relayed as DNS over TCP. **Block QUIC / HTTP3**
-  (Settings, on by default) answers QUIC with a Version Negotiation packet so browsers use HTTPS over TCP at once instead of
-  waiting for a timeout. Other UDP is dropped. The Worker exit is TCP only.
+- DNS is resolved on the server side; UDP to port 53 is relayed as DNS over TCP. **Relay UDP** (Settings, on by default) carries
+  other UDP (NTP, games, calls) through the w2ray server's UDP flows; an older server without UDP is detected and UDP stays off.
+  **Block QUIC / HTTP3** (on by default) answers QUIC with a Version Negotiation packet so browsers use HTTPS over TCP at once
+  instead of waiting for a timeout; turn it off to send QUIC through the tunnel too (it can be slower than TCP on a lossy link).
+  UDP leaves from the w2ray server's own address. The Worker exit is TCP only: with a Worker profile, UDP uses the fallback server
+  if you set one, otherwise it is dropped.
 - Project layout: `www/` (HTML/CSS/JS), `sweetmelon.yaml` (core version, plugin list), `icon.png`.

@@ -313,7 +313,7 @@
       tog('sKill', t('killSwitch'), t('killSwitchDesc'), s.killSwitch) +
       '<div class="row"><div class="grow">' + t('systemKill') + '<div class="sub">' + t('systemKillDesc') + '</div></div><button class="btn sec sm" id="sSys">' + ic('chev') + '</button></div>' +
       tog('sBypass', t('bypassLan'), t('bypassLanDesc'), s.bypassLan) + tog('sGlobal', t('globalMode'), '', s.globalMode) +
-      tog('sV6', t('ipv6'), t('ipv6Desc'), s.enableIpv6) + tog('sBlock6', t('blockIpv6'), t('blockIpv6Desc'), s.blockIpv6) + num('sMtu', t('mtu'), s.tunnelMtu) + tog('sQuic', t('blockQuic'), t('blockQuicDesc'), s.blockQuic) + '</div>' +
+      tog('sV6', t('ipv6'), t('ipv6Desc'), s.enableIpv6) + tog('sBlock6', t('blockIpv6'), t('blockIpv6Desc'), s.blockIpv6) + num('sMtu', t('mtu'), s.tunnelMtu) + tog('sQuic', t('blockQuic'), t('blockQuicDesc'), s.blockQuic) + tog('sUdp', t('udpRelay'), t('udpRelayDesc'), s.udpRelay) + '</div>' +
       '<div class="card"><h3>' + t('dns') + '</h3>' + tog('sRDns', t('remoteDns'), t('remoteDnsDesc'), s.remoteDns) +
       '<div class="row"><div class="grow">' + t('dnsServer') + '</div><input id="sDns" dir="ltr" value="' + esc(s.dnsIpv4) + '" style="width:130px"></div></div>' +
       '<div class="card"><h3>' + t('splitTunnel') + '</h3><select id="sSplit"><option value="off"' + (s.splitMode === 'off' ? ' selected' : '') + '>' + t('splitOff') + '</option><option value="exclude"' + (s.splitMode === 'exclude' ? ' selected' : '') + '>' + t('splitExclude') + '</option><option value="include"' + (s.splitMode === 'include' ? ' selected' : '') + '>' + t('splitInclude') + '</option></select>' +
@@ -327,7 +327,7 @@
     async function put() { await Store.saveSettings(); }
     function bindToggle(id, key) { $('#' + id, v).onchange = function () { s[key] = this.checked; put(); }; }
     function bindNum(id, key) { $('#' + id, v).onchange = function () { s[key] = Number(this.value) || 0; put(); }; }
-    bindToggle('sKill', 'killSwitch'); bindToggle('sBypass', 'bypassLan'); bindToggle('sGlobal', 'globalMode'); bindToggle('sV6', 'enableIpv6'); bindToggle('sBlock6', 'blockIpv6'); bindToggle('sQuic', 'blockQuic'); bindToggle('sRDns', 'remoteDns');
+    bindToggle('sKill', 'killSwitch'); bindToggle('sBypass', 'bypassLan'); bindToggle('sGlobal', 'globalMode'); bindToggle('sV6', 'enableIpv6'); bindToggle('sBlock6', 'blockIpv6'); bindToggle('sQuic', 'blockQuic'); bindToggle('sUdp', 'udpRelay'); bindToggle('sRDns', 'remoteDns');
     var gg = $('#sGoogle', v); if (gg) gg.onchange = function () { s.excludeGoogleServices = this.checked; put(); };
     bindNum('sMtu', 'tunnelMtu'); bindNum('sPool', 'warmPool'); bindNum('sIdle', 'idleMin'); bindNum('sConnT', 'connectTimeoutSec'); bindNum('sPing', 'pingIntervalSec');
     $('#sDns', v).onchange = function () { s.dnsIpv4 = this.value.trim(); put(); };
