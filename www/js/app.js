@@ -117,7 +117,7 @@
   async function connect() {
     var p = Store.active();
     if (!p) { toast(t('noProfile')); ui.tab = 'profiles'; paintTabs(); render(); return; }
-    if (!p.host || !p.password) { toast(t('needsServer')); return; }
+    if (!Store.usable(p)) { toast(t('needsServer')); return; }
     var s = Store.settings;
     if (s.mode === 'proxy' && !s.share.enabled) { toast(t('proxyOnlyNeedsShare')); ui.tab = 'share'; paintTabs(); render(); return; }
     try {
@@ -142,7 +142,7 @@
       (list.length ? list.map(function (p) {
         var cur = act && act.id === p.id;
         return '<div class="prof' + (cur ? ' act' : '') + '" data-id="' + p.id + '"><div class="dot">' + ic('dns') + '</div><div class="grow"><b>' + esc(p.name) + '</b>' + (cur ? '<span class="tag">' + t('active') + '</span>' : '') +
-          '<div class="sub">' + esc(p.host) + ':' + p.port + esc(p.path) + (p.useTls ? ' · TLS' : '') + '</div></div>' +
+          '<div class="sub">' + (p.kind === 'worker' ? 'Cloudflare Worker · ' + (p.exit === 'server' ? esc(p.fb.host) : esc(p.host)) + (p.exit !== 'server' && p.cloudflareFallback && p.fb.host ? ' → ' + esc(p.fb.host) : '') : esc(p.host) + ':' + p.port + esc(p.path) + (p.useTls ? ' · TLS' : '')) + '</div></div>' +
           '<div class="btns" style="flex-wrap:nowrap;gap:8px"><button class="btn sec sm" data-a="use" aria-label="use">' + ic('check') + '</button><button class="btn sec sm" data-a="edit" aria-label="edit">' + ic('edit') + '</button></div></div>';
       }).join('') : '<div class="empty">' + t('noProfiles') + '</div>');
     $('#addP', v).onclick = function () { editProfile(null); };
@@ -156,31 +156,56 @@
     };
   }
   function editProfile(p) {
-    var isNew = !p; p = p || Store.normalize({ name: '', host: '', port: 443, path: '/api/stream' });
+    var isNew = !p; p = p || Store.normalize({ name: '', host: '', port: 443, path: '/', kind: 'worker' });
+    var fb = p.fb;
+    function opt(v, cur, label) { return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + label + '</option>'; }
     openSheet('<h2>' + t(isNew ? 'addProfile' : 'editProfile') + '</h2>' +
       '<label class="f">' + t('name') + '</label><input id="fName" value="' + esc(p.name) + '">' +
-      '<label class="f">' + t('url') + ' (' + t('urlHint') + ')</label><input id="fUrl" dir="ltr" placeholder="' + t('urlHint') + '">' +
+      '<label class="f">' + t('kind') + '</label><select id="fKind">' + opt('worker', p.kind, t('kindWorker')) + opt('server', p.kind, t('kindServer')) + '</select>' +
+      '<div id="wBoxTop"><label class="f">' + t('exit') + '</label><select id="fExit">' + opt('cloudflare', p.exit, t('exitCloudflare')) + opt('server', p.exit, t('exitServer')) + '</select></div>' +
+      '<div id="mainBox"><label class="f" id="fUrlL">' + t('url') + ' (' + t('urlHint') + ')</label><input id="fUrl" dir="ltr" placeholder="' + t('urlHint') + '">' +
       '<div class="btns" style="gap:10px"><div style="flex:2"><label class="f">' + t('host') + '</label><input id="fHost" dir="ltr" value="' + esc(p.host) + '"></div><div style="flex:1"><label class="f">' + t('port') + '</label><input id="fPort" type="number" value="' + p.port + '"></div></div>' +
       '<label class="f">' + t('path') + '</label><input id="fPath" dir="ltr" value="' + esc(p.path) + '">' +
-      '<label class="f">' + t('password') + '</label><input id="fPass" type="password" value="' + esc(p.password) + '">' +
+      '<label class="f" id="fPassL">' + t('password') + '</label><input id="fPass" type="password" value="' + esc(p.password) + '">' +
       '<div class="row"><div class="grow">' + t('useTls') + '</div>' + sw('fTls', p.useTls) + '</div>' +
       '<details><summary class="sub" style="padding:8px 0">' + t('advancedServer') + '</summary>' +
       '<label class="f">' + t('sni') + '</label><input id="fSni" dir="ltr" value="' + esc(p.sni) + '">' +
       '<label class="f">' + t('hostHeader') + '</label><input id="fHostH" dir="ltr" value="' + esc(p.hostHeader) + '">' +
-      '<div class="row"><div class="grow">' + t('allowInsecure') + '</div>' + sw('fIns', p.allowInsecure) + '</div></details>' +
+      '<div class="row"><div class="grow">' + t('allowInsecure') + '</div>' + sw('fIns', p.allowInsecure) + '</div></details></div>' +
+      '<div id="wBox"><div class="row"><div class="grow">' + t('cloudflareFallback') + '<div class="sub">' + t('cloudflareFallbackDesc') + '</div></div>' + sw('fCf', p.cloudflareFallback) + '</div></div>' +
+      '<div id="sBox"><h3 style="margin:14px 0 4px">' + t('myServer') + '</h3>' +
+      '<div class="btns" style="gap:10px"><div style="flex:2"><label class="f">' + t('host') + '</label><input id="bHost" dir="ltr" value="' + esc(fb.host) + '"></div><div style="flex:1"><label class="f">' + t('port') + '</label><input id="bPort" type="number" value="' + fb.port + '"></div></div>' +
+      '<label class="f">' + t('path') + '</label><input id="bPath" dir="ltr" value="' + esc(fb.path) + '">' +
+      '<label class="f">' + t('password') + '</label><input id="bPass" type="password" value="' + esc(fb.password) + '">' +
+      '<div class="row"><div class="grow">' + t('useTls') + '</div>' + sw('bTls', fb.useTls) + '</div>' +
+      '<label class="f">' + t('sni') + '</label><input id="bSni" dir="ltr" value="' + esc(fb.sni) + '"></div>' +
       '<div id="fMsg" class="hint"></div>' +
       '<div class="btns" style="margin-top:12px"><button class="btn" id="fSave">' + t('save') + '</button><button class="btn sec" id="fTest">' + t('test') + '</button>' +
       (isNew ? '' : '<button class="btn sec" id="fDup">' + t('duplicate') + '</button><button class="btn sec" id="fLink">' + t('copy') + ' link</button><button class="btn danger" id="fDel">' + t('delete') + '</button>') + '<button class="btn sec" id="fCancel">' + t('cancel') + '</button></div>',
       function (el) {
+        function show(id, on) { $('#' + id, el).style.display = on ? '' : 'none'; }
+        function sync() {
+          var worker = $('#fKind', el).value === 'worker', srvExit = worker && $('#fExit', el).value === 'server';
+          show('wBoxTop', worker); show('mainBox', !srvExit); show('wBox', worker && !srvExit);
+          show('sBox', srvExit || (worker && $('#fCf', el).checked));
+          $('#fPassL', el).textContent = t(worker ? 'token' : 'password');
+          $('#fUrlL', el).textContent = t('url') + ' (' + (worker ? 'https://name.workers.dev' : t('urlHint')) + ')';
+          if (worker && !$('#fPath', el).dataset.touched && $('#fPath', el).value === '/api/stream') $('#fPath', el).value = '/';
+          if (!worker && !$('#fPath', el).dataset.touched && $('#fPath', el).value === '/') $('#fPath', el).value = '/api/stream';
+        }
+        $('#fPath', el).oninput = function () { this.dataset.touched = '1'; };
+        $('#fKind', el).onchange = sync; $('#fExit', el).onchange = sync; $('#fCf', el).onchange = sync; sync();
         function read() {
           var u = $('#fUrl', el).value.trim(), base = { name: $('#fName', el).value.trim() };
-          var q = { host: $('#fHost', el).value.trim(), port: Number($('#fPort', el).value) || 443, path: $('#fPath', el).value.trim() || '/', password: $('#fPass', el).value, useTls: $('#fTls', el).checked, sni: $('#fSni', el).value.trim(), hostHeader: $('#fHostH', el).value.trim(), allowInsecure: $('#fIns', el).checked };
+          var q = { host: $('#fHost', el).value.trim(), port: Number($('#fPort', el).value) || 443, path: $('#fPath', el).value.trim() || '/', password: $('#fPass', el).value, useTls: $('#fTls', el).checked, sni: $('#fSni', el).value.trim(), hostHeader: $('#fHostH', el).value.trim(), allowInsecure: $('#fIns', el).checked,
+            kind: $('#fKind', el).value, exit: $('#fExit', el).value, cloudflareFallback: $('#fCf', el).checked,
+            fb: { host: $('#bHost', el).value.trim(), port: Number($('#bPort', el).value) || 443, path: $('#bPath', el).value.trim() || '/api/stream', password: $('#bPass', el).value, useTls: $('#bTls', el).checked, sni: $('#bSni', el).value.trim(), hostHeader: fb.hostHeader, allowInsecure: fb.allowInsecure } };
           if (u) { var x = Store.parseImport(u)[0]; q = Object.assign(q, { host: x.host, port: x.port, path: x.path, useTls: x.useTls }); if (x.password) q.password = x.password; if (x.sni) q.sni = x.sni; if (x.allowInsecure) q.allowInsecure = true; if (!base.name) base.name = x.name; }
-          var out = Object.assign({}, p, q, base); if (!out.name) out.name = out.host; return out;
+          var out = Object.assign({}, p, q, base); if (!out.name) out.name = out.host || out.fb.host; return out;
         }
         $('#fCancel', el).onclick = closeSheet;
         $('#fSave', el).onclick = async function () {
-          try { var o = read(); if (!o.host || !o.password) { $('#fMsg', el).innerHTML = '<span class="err">' + t('needsServer') + '</span>'; return; } await Store.saveProfile(o); closeSheet(); toast(t('saved')); render(); }
+          try { var o = read(); if (!Store.usable(o)) { $('#fMsg', el).innerHTML = '<span class="err">' + t('needsServer') + '</span>'; return; } await Store.saveProfile(o); closeSheet(); toast(t('saved')); render(); }
           catch (e) { $('#fMsg', el).innerHTML = '<span class="err">' + esc(errText(e)) + '</span>'; }
         };
         $('#fTest', el).onclick = async function () {
@@ -288,7 +313,7 @@
       tog('sKill', t('killSwitch'), t('killSwitchDesc'), s.killSwitch) +
       '<div class="row"><div class="grow">' + t('systemKill') + '<div class="sub">' + t('systemKillDesc') + '</div></div><button class="btn sec sm" id="sSys">' + ic('chev') + '</button></div>' +
       tog('sBypass', t('bypassLan'), t('bypassLanDesc'), s.bypassLan) + tog('sGlobal', t('globalMode'), '', s.globalMode) +
-      tog('sV6', t('ipv6'), t('ipv6Desc'), s.enableIpv6) + tog('sBlock6', t('blockIpv6'), t('blockIpv6Desc'), s.blockIpv6) + num('sMtu', t('mtu'), s.tunnelMtu) + '</div>' +
+      tog('sV6', t('ipv6'), t('ipv6Desc'), s.enableIpv6) + tog('sBlock6', t('blockIpv6'), t('blockIpv6Desc'), s.blockIpv6) + num('sMtu', t('mtu'), s.tunnelMtu) + tog('sQuic', t('blockQuic'), t('blockQuicDesc'), s.blockQuic) + '</div>' +
       '<div class="card"><h3>' + t('dns') + '</h3>' + tog('sRDns', t('remoteDns'), t('remoteDnsDesc'), s.remoteDns) +
       '<div class="row"><div class="grow">' + t('dnsServer') + '</div><input id="sDns" dir="ltr" value="' + esc(s.dnsIpv4) + '" style="width:130px"></div></div>' +
       '<div class="card"><h3>' + t('splitTunnel') + '</h3><select id="sSplit"><option value="off"' + (s.splitMode === 'off' ? ' selected' : '') + '>' + t('splitOff') + '</option><option value="exclude"' + (s.splitMode === 'exclude' ? ' selected' : '') + '>' + t('splitExclude') + '</option><option value="include"' + (s.splitMode === 'include' ? ' selected' : '') + '>' + t('splitInclude') + '</option></select>' +
@@ -302,7 +327,7 @@
     async function put() { await Store.saveSettings(); }
     function bindToggle(id, key) { $('#' + id, v).onchange = function () { s[key] = this.checked; put(); }; }
     function bindNum(id, key) { $('#' + id, v).onchange = function () { s[key] = Number(this.value) || 0; put(); }; }
-    bindToggle('sKill', 'killSwitch'); bindToggle('sBypass', 'bypassLan'); bindToggle('sGlobal', 'globalMode'); bindToggle('sV6', 'enableIpv6'); bindToggle('sBlock6', 'blockIpv6'); bindToggle('sRDns', 'remoteDns');
+    bindToggle('sKill', 'killSwitch'); bindToggle('sBypass', 'bypassLan'); bindToggle('sGlobal', 'globalMode'); bindToggle('sV6', 'enableIpv6'); bindToggle('sBlock6', 'blockIpv6'); bindToggle('sQuic', 'blockQuic'); bindToggle('sRDns', 'remoteDns');
     var gg = $('#sGoogle', v); if (gg) gg.onchange = function () { s.excludeGoogleServices = this.checked; put(); };
     bindNum('sMtu', 'tunnelMtu'); bindNum('sPool', 'warmPool'); bindNum('sIdle', 'idleMin'); bindNum('sConnT', 'connectTimeoutSec'); bindNum('sPing', 'pingIntervalSec');
     $('#sDns', v).onchange = function () { s.dnsIpv4 = this.value.trim(); put(); };

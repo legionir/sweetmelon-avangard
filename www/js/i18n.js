@@ -2,6 +2,10 @@
   'use strict';
   var T = {
     en: {
+      kind: 'Type', kindWorker: 'Cloudflare Worker (no server needed)', kindServer: 'w2ray server', token: 'Worker token (AUTH_TOKEN)',
+      exit: 'Exit', exitCloudflare: 'Cloudflare (through the Worker)', exitServer: 'My server only',
+      cloudflareFallback: 'Fall back to my server', cloudflareFallbackDesc: 'Sites behind Cloudflare, or any the Worker cannot reach, go through your server instead', myServer: 'My server (w2ray)',
+      blockQuic: 'Block QUIC / HTTP3', blockQuicDesc: 'Browsers fall back to HTTPS over TCP at once instead of waiting',
       home: 'Home', profiles: 'Profiles', share: 'Share', logs: 'Logs', settings: 'Settings',
       idle: 'Disconnected', connecting: 'Connecting…', connected: 'Connected', reconnecting: 'Reconnecting…', disconnecting: 'Disconnecting…', error: 'Error',
       tapConnect: 'Tap to connect', tapDisconnect: 'Tap to disconnect', noProfile: 'Add a server profile first',
@@ -33,6 +37,10 @@
       authFailed: 'The server refused the password', disconnectBtn: 'Disconnect', connectBtn: 'Connect', permOk: 'Permissions granted', sub_off: 'service inactive', sub_connecting: 'establishing tunnel…', sub_reconnecting: 'recovering connection…', sub_on: 'relay active • traffic routing', sub_error: 'connection failed', unavailable: 'Open this app on Android with the VPN module', speed: 'Speed',
     },
     fa: {
+      kind: 'نوع', kindWorker: 'ورکر کلودفلر (بدون نیاز به سرور)', kindServer: 'سرور w2ray', token: 'توکن ورکر (AUTH_TOKEN)',
+      exit: 'خروجی', exitCloudflare: 'کلودفلر (از طریق ورکر)', exitServer: 'فقط سرور من',
+      cloudflareFallback: 'فالبک به سرور من', cloudflareFallbackDesc: 'سایت‌های پشت کلودفلر یا هر مقصدی که ورکر به آن نمی‌رسد، از سرور شما عبور می‌کنند', myServer: 'سرور من (w2ray)',
+      blockQuic: 'مسدودسازی QUIC / HTTP3', blockQuicDesc: 'مرورگر به‌جای انتظار، فوراً به HTTPS روی TCP برمی‌گردد',
       home: 'خانه', profiles: 'پروفایل‌ها', share: 'اشتراک', logs: 'گزارش‌ها', settings: 'تنظیمات',
       idle: 'قطع', connecting: 'در حال اتصال…', connected: 'متصل', reconnecting: 'اتصال مجدد…', disconnecting: 'در حال قطع…', error: 'خطا',
       tapConnect: 'برای اتصال بزنید', tapDisconnect: 'برای قطع بزنید', noProfile: 'ابتدا یک پروفایل سرور اضافه کنید',

@@ -19,11 +19,21 @@ secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`; wit
 The workflow uses the action `legionir/sweetmelon` at the branch that holds core 2.7.0; once that release is tagged,
 change it to `@v2.7.0`.
 
+## Exit: Cloudflare Worker (default) or your own server
+A profile is one of two types:
+- **Cloudflare Worker** (default for new profiles): the phone talks straight to a Worker running
+  [`ws-cf-tunnel/Cloudflare/worker.js`](https://github.com/legionir/ws-cf-tunnel). Enter its address
+  (`https://name.workers.dev`) and its `AUTH_TOKEN`; no server of your own is needed. A Worker cannot reach destinations
+  that are themselves behind Cloudflare. Turn on **Fall back to my server** and add a w2ray server: those destinations (and
+  any the Worker answers 502 for) then leave through your server. **Exit → My server only** ignores the Worker.
+- **w2ray server**: the original mode, below.
+
 ## Server
 Run the tunnel server of the w2ray project (`TUNNEL_ENABLED=1`), then add a profile with its `wss://host:4431/api/stream`
 address and password. A wrong password is not retried: the server bans an address after five failures for 15 minutes.
 
 ## Notes
-- The tunnel carries TCP. DNS is resolved on the server side; UDP to port 53 is relayed as DNS over TCP, other UDP
-  (QUIC, games) is dropped and apps fall back to TCP.
+- The tunnel carries TCP. DNS is resolved on the server side; UDP to port 53 is relayed as DNS over TCP. **Block QUIC / HTTP3**
+  (Settings, on by default) answers QUIC with a Version Negotiation packet so browsers use HTTPS over TCP at once instead of
+  waiting for a timeout. Other UDP is dropped. The Worker exit is TCP only.
 - Project layout: `www/` (HTML/CSS/JS), `sweetmelon.yaml` (core version, plugin list), `icon.png`.
