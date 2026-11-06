@@ -26,7 +26,7 @@
 
   var DEFAULTS = {
     lang: '', theme: 'dark', mode: 'vpn', activeId: '',
-    remoteDns: true, dnsIpv4: '8.8.8.8', enableIpv6: false, blockIpv6: true, bypassLan: false, globalMode: true, tunnelMtu: 8500,
+    remoteDns: true, dnsIpv4: '8.8.8.8', blockQuic: true, udpRelay: true, enableIpv6: false, blockIpv6: true, bypassLan: false, globalMode: true, tunnelMtu: 8500,
     killSwitch: true, splitMode: 'off', apps: [], excludeGoogleServices: false,
     warmPool: 2, idleMin: 15, connectTimeoutSec: 15, pingIntervalSec: 45, logLevel: 'warn',
     share: { enabled: false, port: 1080, bind: '0.0.0.0', authEnabled: true, username: 'avangard', password: '', allowPrivate: false }
@@ -48,7 +48,11 @@
       Store.settings.share.password = await secret('share_password');
       if (!Store.settings.share.password) { Store.settings.share.password = randomPass(10); await setSecret('share_password', Store.settings.share.password); }
       Store.profiles = await load('profiles', []);
-      for (var i = 0; i < Store.profiles.length; i++) Store.profiles[i].password = await secret('pwd_' + Store.profiles[i].id);
+      for (var i = 0; i < Store.profiles.length; i++) {
+        var pr = Store.profiles[i];
+        pr.password = await secret('pwd_' + pr.id);
+        Store.profiles[i] = Store.normalize(Object.assign({}, pr, { fb: Object.assign({}, pr.fb || {}, { password: await secret('fbpwd_' + pr.id) }) }), pr.id);
+      }
     },
     async saveSettings() {
       var s = JSON.parse(JSON.stringify(Store.settings));
@@ -61,6 +65,7 @@
       var i = Store.profiles.findIndex(function (x) { return x.id === p.id; });
       if (i >= 0) Store.profiles[i] = p; else Store.profiles.push(p);
       await setSecret('pwd_' + p.id, p.password);
+      await setSecret('fbpwd_' + p.id, p.fb ? p.fb.password : '');
       await Store.persistProfiles();
       if (!Store.settings.activeId) { Store.settings.activeId = p.id; await Store.saveSettings(); }
       return p;
@@ -68,13 +73,20 @@
     async deleteProfile(id) {
       Store.profiles = Store.profiles.filter(function (x) { return x.id !== id; });
       await setSecret('pwd_' + id, '');
+      await setSecret('fbpwd_' + id, '');
       if (Store.settings.activeId === id) Store.settings.activeId = Store.profiles[0] ? Store.profiles[0].id : '';
       await Store.persistProfiles(); await Store.saveSettings();
     },
     async persistProfiles() {
-      await save('profiles', Store.profiles.map(function (p) { var c = Object.assign({}, p); delete c.password; return c; }));
+      await save('profiles', Store.profiles.map(function (p) { var c = Object.assign({}, p); delete c.password; if (c.fb) { c.fb = Object.assign({}, c.fb); delete c.fb.password; } return c; }));
     },
     active() { return Store.profiles.find(function (p) { return p.id === Store.settings.activeId; }) || Store.profiles[0] || null; },
+
+    /** Enough fields to connect? A Worker profile with the server exit only needs the server. */
+    usable(p) {
+      if (p.kind === 'worker' && p.exit === 'server') return !!(p.fb && p.fb.host && p.fb.password);
+      return !!(p.host && p.password);
+    },
 
     /** The configuration the native plugin takes. */
     buildConfig(p) {
@@ -82,7 +94,7 @@
       var c = {
         mode: s.mode, label: p.name,
         serverHost: p.host, serverPort: Number(p.port) || 443, useTls: p.useTls !== false, wsPath: p.path || '/', password: p.password,
-        sni: p.sni || '', hostHeader: p.hostHeader || '', allowInsecure: !!p.allowInsecure,
+        sni: p.sni || '', hostHeader: p.hostHeader || '', allowInsecure: !!p.allowInsecure, blockQuic: s.blockQuic !== false, udpRelay: s.udpRelay !== false,
         remoteDns: s.remoteDns, dnsIpv4: s.dnsIpv4, enableIpv6: s.enableIpv6, blockIpv6: s.blockIpv6, bypassLan: s.bypassLan,
         globalMode: s.globalMode, tunnelMtu: Number(s.tunnelMtu) || 8500, killSwitch: s.killSwitch,
         splitMode: s.splitMode, apps: s.apps, excludeGoogleServices: s.excludeGoogleServices,
@@ -93,6 +105,15 @@
           disconnect: I18n.t('disconnectBtn'), download: '↓', upload: '↑'
         }
       };
+      if (p.kind === 'worker') {
+        // A Cloudflare Worker (ws-cf-tunnel): no w2ray server needed. The password is its AUTH_TOKEN.
+        c.transport = 'worker'; c.exit = p.exit === 'server' ? 'server' : 'cloudflare'; c.cloudflareFallback = p.cloudflareFallback !== false;
+        var f = p.fb;
+        if (f && f.host) {
+          c.fallback = { serverHost: f.host, serverPort: Number(f.port) || 443, useTls: f.useTls !== false, wsPath: f.path || '/api/stream', password: f.password || '',
+            sni: f.sni || '', hostHeader: f.hostHeader || '', allowInsecure: !!f.allowInsecure };
+        }
+      }
       if (sh.enabled || s.mode === 'proxy') {
         c.share = { enabled: true, bind: sh.bind, port: Number(sh.port) || 1080, authEnabled: !!sh.authEnabled, username: sh.username, password: sh.password, allowPrivate: !!sh.allowPrivate };
       }
@@ -114,20 +135,28 @@
         name: decodeURIComponent(u.hash.replace(/^#/, '')) || u.hostname,
         host: u.hostname, port: Number(u.port) || (tls ? 443 : 80), useTls: tls, path: u.pathname || '/',
         password: u.password ? decodeURIComponent(u.password) : (q.get('password') || q.get('pass') || ''),
-        sni: q.get('sni') || '', allowInsecure: q.get('insecure') === '1' || q.get('allowInsecure') === '1'
+        sni: q.get('sni') || '', allowInsecure: q.get('insecure') === '1' || q.get('allowInsecure') === '1',
+        kind: q.get('kind') === 'worker' ? 'worker' : 'server'
       })];
     },
-    normalize(x) {
+    normalize(x, id) {
+      var f = x.fb || x.fallback || {};
       return {
-        id: '', name: String(x.name || x.host || 'Server'), host: String(x.host || x.serverHost || '').trim(), port: Number(x.port || x.serverPort) || 443,
+        id: id || '', name: String(x.name || x.host || 'Server'), host: String(x.host || x.serverHost || '').trim(), port: Number(x.port || x.serverPort) || 443,
         useTls: x.useTls !== false && x.useSSL !== false, path: x.path || x.wsPath || '/', password: String(x.password || ''),
-        sni: x.sni || '', hostHeader: x.hostHeader || '', allowInsecure: !!x.allowInsecure
+        sni: x.sni || '', hostHeader: x.hostHeader || '', allowInsecure: !!x.allowInsecure,
+        // 'worker': a Cloudflare Worker is the exit (default for new profiles). 'server': a w2ray server.
+        kind: x.kind === 'worker' ? 'worker' : 'server',
+        exit: x.exit === 'server' ? 'server' : 'cloudflare', cloudflareFallback: x.cloudflareFallback !== false,
+        fb: { host: String(f.host || f.serverHost || '').trim(), port: Number(f.port || f.serverPort) || 443, useTls: f.useTls !== false, path: f.path || f.wsPath || '/api/stream',
+          password: String(f.password || ''), sni: f.sni || '', hostHeader: f.hostHeader || '', allowInsecure: !!f.allowInsecure }
       };
     },
     toLink(p) {
       var q = [];
       if (p.sni) q.push('sni=' + encodeURIComponent(p.sni));
       if (p.allowInsecure) q.push('insecure=1');
+      if (p.kind === 'worker') q.push('kind=worker'); // the fallback server is not part of the link
       return (p.useTls ? 'wss' : 'ws') + '://:' + encodeURIComponent(p.password) + '@' + p.host + ':' + p.port + (p.path || '/') + (q.length ? '?' + q.join('&') : '') + '#' + encodeURIComponent(p.name);
     },
     unwrap: unwrap, randomPass: randomPass, DEFAULTS: DEFAULTS
