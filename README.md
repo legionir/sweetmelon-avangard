@@ -16,7 +16,7 @@ core with its `w2rayTunnel` plugin.
 GitHub Actions → **Build AvanGard** → the APK is the `avangard-apk` artifact. Sign it with your own key by adding the
 secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`; without them a throw-away key is used.
 
-The workflow uses the action `legionir/sweetmelon` at the branch that holds core 2.7.0; once that release is tagged,
+The workflow uses the action `legionir/sweetmelon` at `main` (the old branch `claude/epic-bell-7j8asn` lacks the UDP, Worker and QUIC engine); once 2.7.0 is tagged,
 change it to `@v2.7.0`.
 
 ## Exit: Cloudflare Worker (default) or your own server
